@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { AgendaEntry, AgendaStatus } from '@/types';
 import { useAgendaStore } from '@/store/agendaStore';
+import { useAuthStore } from '@/store/authStore';
+import { HAS_AUTH } from '@/lib/supabase';
 import { getImageUrl } from '@/lib/tmdb';
 import { formatDate } from '@/lib/format';
 import ScheduleModal from '@/components/ScheduleModal';
@@ -76,6 +78,7 @@ function AgendaRow({ entry, onEdit }: { entry: AgendaEntry; onEdit: () => void }
 export default function MyAgenda() {
   const entries = useAgendaStore((s) => Object.values(s.entries));
   const updateEntry = useAgendaStore((s) => s.updateEntry);
+  const authStatus = useAuthStore((s) => s.status);
   const [tab, setTab] = useState<'all' | AgendaStatus>('all');
   const [editing, setEditing] = useState<AgendaEntry | null>(null);
 
@@ -94,6 +97,11 @@ export default function MyAgenda() {
       <div>
         <h1 className="text-2xl font-bold text-slate-100">Mi agenda</h1>
         <p className="text-sm text-slate-400">Todo lo que quieres ver, lo que estás viendo y lo que ya viste.</p>
+        {HAS_AUTH && authStatus === 'signedOut' && (
+          <p className="mt-1 text-sm text-accent-300">
+            💡 Inicia sesión con Google para guardar tu agenda en la nube y acceder desde cualquier dispositivo.
+          </p>
+        )}
       </div>
 
       <div className="flex gap-2">
