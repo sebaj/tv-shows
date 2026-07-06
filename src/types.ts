@@ -58,6 +58,21 @@ export interface MediaDetails extends MediaItem {
 
 export type SearchType = 'all' | MediaType;
 
+export type SharePermission = 'read' | 'write';
+
+/** Un permiso que yo otorgué sobre mi agenda. */
+export interface ShareGiven {
+  sharedWithEmail: string;
+  permission: SharePermission;
+}
+
+/** Una agenda ajena a la que me dieron acceso. */
+export interface ShareReceived {
+  ownerId: string;
+  ownerEmail: string;
+  permission: SharePermission;
+}
+
 export type AgendaStatus = 'pendiente' | 'viendo' | 'vista';
 
 export interface AgendaEntry {

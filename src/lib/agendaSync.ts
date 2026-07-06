@@ -1,15 +1,20 @@
 import { supabase } from '@/lib/supabase';
-import type { AgendaEntry, AgendaStatus, MediaType } from '@/types';
+import type { AgendaEntry, AgendaStatus, MediaType, ShareGiven, SharePermission, ShareReceived } from '@/types';
 
 /**
  * Sincronización de la agenda con Supabase. Todas las operaciones son no-op
  * mientras no haya un usuario autenticado, así el store de la agenda no
  * necesita conocer el estado de sesión.
  */
-let remoteEnabled = false;
+interface RemoteUser {
+  id: string;
+  email: string;
+}
 
-export function setRemoteEnabled(enabled: boolean): void {
-  remoteEnabled = enabled;
+let remoteUser: RemoteUser | null = null;
+
+export function setRemoteUser(user: RemoteUser | null): void {
+  remoteUser = user;
 }
 
 interface AgendaRow {
@@ -48,14 +53,16 @@ function toEntry(row: AgendaRow): AgendaEntry {
 }
 
 export async function fetchRemoteEntries(): Promise<AgendaEntry[]> {
-  if (!supabase || !remoteEnabled) return [];
-  const { data, error } = await supabase.from('agenda_entries').select();
+  if (!supabase || !remoteUser) return [];
+  // Filtrado explícito por dueño: las políticas RLS también dejan leer las
+  // agendas que me compartieron, y esas no deben mezclarse con la mía.
+  const { data, error } = await supabase.from('agenda_entries').select().eq('user_id', remoteUser.id);
   if (error) throw error;
   return (data as AgendaRow[]).map(toEntry);
 }
 
 export async function upsertRemoteEntries(entries: AgendaEntry[]): Promise<void> {
-  if (!supabase || !remoteEnabled || entries.length === 0) return;
+  if (!supabase || !remoteUser || entries.length === 0) return;
   const { error } = await supabase.from('agenda_entries').upsert(entries.map(toRow));
   if (error) throw error;
 }
@@ -66,13 +73,98 @@ export function pushEntry(entry: AgendaEntry): void {
 }
 
 export function pushRemoval(id: number, mediaType: MediaType): void {
-  if (!supabase || !remoteEnabled) return;
+  if (!supabase || !remoteUser) return;
   supabase
     .from('agenda_entries')
     .delete()
     .eq('media_id', id)
     .eq('media_type', mediaType)
+    .eq('user_id', remoteUser.id)
     .then(({ error }) => {
       if (error) console.error('No se pudo sincronizar la agenda:', error);
     });
+}
+
+// --- Agendas compartidas ---
+
+interface ShareRow {
+  owner_id: string;
+  owner_email: string;
+  shared_with_email: string;
+  permission: SharePermission;
+}
+
+/** Permisos que yo otorgué sobre mi agenda. */
+export async function fetchSharesGiven(): Promise<ShareGiven[]> {
+  if (!supabase || !remoteUser) return [];
+  const { data, error } = await supabase
+    .from('agenda_shares')
+    .select()
+    .eq('owner_id', remoteUser.id)
+    .order('shared_with_email');
+  if (error) throw error;
+  return (data as ShareRow[]).map((r) => ({ sharedWithEmail: r.shared_with_email, permission: r.permission }));
+}
+
+/** Agendas ajenas a las que me dieron acceso. */
+export async function fetchSharesReceived(): Promise<ShareReceived[]> {
+  if (!supabase || !remoteUser) return [];
+  const { data, error } = await supabase
+    .from('agenda_shares')
+    .select()
+    .eq('shared_with_email', remoteUser.email.toLowerCase())
+    .order('owner_email');
+  if (error) throw error;
+  return (data as ShareRow[]).map((r) => ({
+    ownerId: r.owner_id,
+    ownerEmail: r.owner_email,
+    permission: r.permission,
+  }));
+}
+
+/** Crea o actualiza (si ya existía, cambia el permiso) un share de mi agenda. */
+export async function saveShare(email: string, permission: SharePermission): Promise<void> {
+  if (!supabase || !remoteUser) return;
+  const { error } = await supabase.from('agenda_shares').upsert({
+    owner_email: remoteUser.email.toLowerCase(),
+    shared_with_email: email.trim().toLowerCase(),
+    permission,
+  });
+  if (error) throw error;
+}
+
+export async function removeShare(email: string): Promise<void> {
+  if (!supabase || !remoteUser) return;
+  const { error } = await supabase
+    .from('agenda_shares')
+    .delete()
+    .eq('owner_id', remoteUser.id)
+    .eq('shared_with_email', email.toLowerCase());
+  if (error) throw error;
+}
+
+// --- Operaciones sobre una agenda ajena (requieren permiso de escritura en RLS) ---
+
+export async function fetchEntriesOf(ownerId: string): Promise<AgendaEntry[]> {
+  if (!supabase || !remoteUser) return [];
+  const { data, error } = await supabase.from('agenda_entries').select().eq('user_id', ownerId);
+  if (error) throw error;
+  return (data as AgendaRow[]).map(toEntry);
+}
+
+export async function upsertEntryFor(ownerId: string, entry: AgendaEntry): Promise<void> {
+  if (!supabase || !remoteUser) return;
+  const { error } = await supabase.from('agenda_entries').upsert({ ...toRow(entry), user_id: ownerId });
+  if (error) throw error;
+}
+
+export async function deleteEntryFor(ownerId: string, id: number, mediaType: MediaType): Promise<void> {
+  if (!supabase || !remoteUser) return;
+  const { error } = await supabase
+    .from('agenda_entries')
+    .delete()
+    .eq('user_id', ownerId)
+    .eq('media_id', id)
+    .eq('media_type', mediaType);
+  if (error) throw error;
 }

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
-import { fetchRemoteEntries, setRemoteEnabled, upsertRemoteEntries } from '@/lib/agendaSync';
+import { fetchRemoteEntries, setRemoteUser, upsertRemoteEntries } from '@/lib/agendaSync';
 import { useAgendaStore } from '@/store/agendaStore';
 
 const ALLOWED_EMAILS = (import.meta.env.VITE_ALLOWED_EMAILS ?? '')
@@ -43,7 +43,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
 
   signOut: async () => {
     await supabase?.auth.signOut();
-    setRemoteEnabled(false);
+    setRemoteUser(null);
     useAgendaStore.getState().clear();
     set({ user: null, status: 'signedOut' });
   },
@@ -67,7 +67,7 @@ function handleSession(session: Session | null): void {
   const previousStatus = useAuthStore.getState().status;
 
   if (!session?.user) {
-    setRemoteEnabled(false);
+    setRemoteUser(null);
     // No pisar 'unauthorized': el signOut forzado de abajo también dispara este evento.
     useAuthStore.setState((s) => ({
       user: null,
@@ -78,13 +78,13 @@ function handleSession(session: Session | null): void {
 
   const email = session.user.email ?? '';
   if (!isEmailAllowed(email)) {
-    setRemoteEnabled(false);
+    setRemoteUser(null);
     useAuthStore.setState({ user: null, status: 'unauthorized' });
     void supabase?.auth.signOut();
     return;
   }
 
-  setRemoteEnabled(true);
+  setRemoteUser({ id: session.user.id, email });
   useAuthStore.setState({
     user: {
       id: session.user.id,

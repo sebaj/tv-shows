@@ -44,6 +44,18 @@ Sin configuración, la agenda se guarda solo en el navegador (`localStorage`). P
 
 Al iniciar sesión por primera vez, lo que tuvieras en la agenda local se sube automáticamente a tu cuenta.
 
+### Compartir tu agenda
+
+Con sesión iniciada, en **Mi agenda** aparece el botón **"Compartir mi agenda"**: agrega el email de Google de la otra persona y elige el permiso (**Solo lectura** o **Puede editar**). Cuando esa persona inicie sesión, verá un selector en su página de agenda para alternar entre la suya y las que le compartieron; con permiso de edición puede cambiar estados, fechas y quitar títulos.
+
+Para una agenda en pareja: que cada uno comparta la suya con el otro en modo "Puede editar" — ambos ven y gestionan las dos agendas.
+
+Notas:
+
+- La restricción la garantiza la base de datos (políticas RLS), no la interfaz.
+- Si actualizas desde una versión anterior, vuelve a ejecutar `supabase/schema.sql` completo (es idempotente): crea la tabla de permisos y actualiza las políticas.
+- Si usas `VITE_ALLOWED_EMAILS`, el email de la otra persona también tiene que estar en esa lista para que pueda iniciar sesión (y hay que reconstruir la imagen de Docker al cambiarlo).
+
 **Notas sobre el plan gratuito y la seguridad:**
 
 - Los proyectos gratuitos de Supabase se **pausan tras ~1 semana sin uso**; se reactivan con un clic desde el dashboard.
