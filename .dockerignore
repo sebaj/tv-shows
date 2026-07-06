@@ -1,0 +1,11 @@
+node_modules
+dist
+.git
+.claude
+supabase
+README.md
+Dockerfile
+docker-compose.yml
+.env.example
+*.local
+.DS_Store

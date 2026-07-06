@@ -1,0 +1,7 @@
+services:
+  tvguide:
+    build: .
+    container_name: tvguide
+    ports:
+      - '8080:80'
+    restart: unless-stopped

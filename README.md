@@ -63,3 +63,42 @@ Al iniciar sesión por primera vez, lo que tuvieras en la agenda local se sube a
 npm run build
 npm run preview
 ```
+
+## Desplegar en Raspberry Pi con Docker
+
+Las imágenes usadas (`node:20-alpine`, `nginx:alpine`) son multi-arch, así que funcionan en ARM64 (Raspberry Pi 4/5) sin cambios.
+
+**Importante**: las variables `VITE_*` se incrustan en el bundle **durante el build de la imagen**, así que el `.env` debe existir antes de construir. Si cambias el `.env`, hay que reconstruir (`--build`).
+
+En la Raspberry Pi:
+
+```bash
+# 1. Docker (si no lo tienes)
+curl -fsSL https://get.docker.com | sh
+
+# 2. Clonar el repo y crear el .env
+git clone <url-del-repo> tv-shows && cd tv-shows
+nano .env   # pegar VITE_TMDB_API_KEY, VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_ALLOWED_EMAILS
+
+# 3. Construir y levantar
+docker compose up -d --build
+```
+
+La app queda en `http://<ip-de-la-pi>:8080`.
+
+### Cloudflare Tunnel
+
+En el dashboard de Cloudflare Zero Trust (`Networks > Tunnels > tu túnel > Public Hostname > Add`):
+
+- **Hostname**: el subdominio que quieras (ej. `tvguide.tudominio.com`)
+- **Service**: `http://localhost:8080` si `cloudflared` corre como servicio en la Pi.
+  Si `cloudflared` corre como contenedor Docker, usa `http://<ip-de-la-pi>:8080` o conecta ambos contenedores a la misma red de Docker y usa `http://tvguide:80`.
+
+### No olvidar: URLs de producción en Supabase
+
+Para que el login con Google funcione desde el dominio público, en el dashboard de Supabase ve a **Authentication → URL Configuration** y:
+
+1. En **Site URL** pon tu URL pública (ej. `https://tvguide.tudominio.com`).
+2. En **Redirect URLs** agrega esa misma URL y, si sigues desarrollando en local, también `http://localhost:5173`.
+
+Sin esto, después de autenticarte en Google, Supabase te redirigirá a la URL equivocada.
