@@ -19,6 +19,32 @@ export interface MediaItem {
   genreIds: number[];
 }
 
+export interface SeasonSummary {
+  id: number;
+  seasonNumber: number;
+  name: string;
+  episodeCount: number;
+  airDate: string | null;
+  posterPath: string | null;
+}
+
+export interface Episode {
+  id: number;
+  seasonNumber: number;
+  episodeNumber: number;
+  name: string;
+  overview: string;
+  airDate: string | null;
+  runtime: number | null;
+}
+
+export interface NextEpisode {
+  seasonNumber: number;
+  episodeNumber: number;
+  name: string;
+  airDate: string | null;
+}
+
 export interface MediaDetails extends MediaItem {
   genres: Genre[];
   runtime: number | null;
@@ -26,7 +52,11 @@ export interface MediaDetails extends MediaItem {
   numberOfEpisodes: number | null;
   status: string | null;
   tagline: string | null;
+  seasons: SeasonSummary[];
+  nextEpisode: NextEpisode | null;
 }
+
+export type SearchType = 'all' | MediaType;
 
 export type AgendaStatus = 'pendiente' | 'viendo' | 'vista';
 

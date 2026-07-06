@@ -1,4 +1,4 @@
-import type { MediaDetails, MediaItem, MediaType, PaginatedResult } from '@/types';
+import type { Episode, MediaDetails, MediaItem, MediaType, PaginatedResult, SearchType } from '@/types';
 import { mockApi } from '@/lib/mockApi';
 
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY as string | undefined;
@@ -43,6 +43,25 @@ interface RawMovie {
   tagline?: string;
 }
 
+interface RawSeason {
+  id: number;
+  season_number: number;
+  name: string;
+  episode_count: number;
+  air_date: string | null;
+  poster_path: string | null;
+}
+
+interface RawEpisode {
+  id: number;
+  season_number: number;
+  episode_number: number;
+  name: string;
+  overview: string;
+  air_date: string | null;
+  runtime: number | null;
+}
+
 interface RawTv {
   id: number;
   name: string;
@@ -59,6 +78,8 @@ interface RawTv {
   number_of_episodes?: number;
   status?: string;
   tagline?: string;
+  seasons?: RawSeason[];
+  next_episode_to_air?: RawEpisode | null;
 }
 
 interface RawMulti extends RawMovie, RawTv {
@@ -106,10 +127,25 @@ function normalizeMovieDetails(raw: RawMovie): MediaDetails {
     numberOfEpisodes: null,
     status: raw.status ?? null,
     tagline: raw.tagline ?? null,
+    seasons: [],
+    nextEpisode: null,
+  };
+}
+
+function normalizeEpisode(raw: RawEpisode): Episode {
+  return {
+    id: raw.id,
+    seasonNumber: raw.season_number,
+    episodeNumber: raw.episode_number,
+    name: raw.name,
+    overview: raw.overview,
+    airDate: raw.air_date,
+    runtime: raw.runtime ?? null,
   };
 }
 
 function normalizeTvDetails(raw: RawTv): MediaDetails {
+  const next = raw.next_episode_to_air;
   return {
     ...normalizeTv(raw),
     genres: raw.genres ?? [],
@@ -118,6 +154,17 @@ function normalizeTvDetails(raw: RawTv): MediaDetails {
     numberOfEpisodes: raw.number_of_episodes ?? null,
     status: raw.status ?? null,
     tagline: raw.tagline ?? null,
+    seasons: (raw.seasons ?? []).map((s) => ({
+      id: s.id,
+      seasonNumber: s.season_number,
+      name: s.name,
+      episodeCount: s.episode_count,
+      airDate: s.air_date,
+      posterPath: s.poster_path,
+    })),
+    nextEpisode: next
+      ? { seasonNumber: next.season_number, episodeNumber: next.episode_number, name: next.name, airDate: next.air_date }
+      : null,
   };
 }
 
@@ -181,7 +228,11 @@ const realApi = {
     return toPaginated(res, mediaType === 'movie' ? normalizeMovie : normalizeTv);
   },
 
-  async search(query: string, page = 1): Promise<PaginatedResult<MediaItem>> {
+  async search(query: string, type: SearchType = 'all', page = 1): Promise<PaginatedResult<MediaItem>> {
+    if (type !== 'all') {
+      const res = await fetchTMDB<TMDBListResponse<RawMovie & RawTv>>(`/search/${type}`, { query, page });
+      return toPaginated(res, type === 'movie' ? normalizeMovie : normalizeTv);
+    }
     const res = await fetchTMDB<TMDBListResponse<RawMulti>>('/search/multi', { query, page });
     const filtered = res.results.filter((r) => r.media_type === 'movie' || r.media_type === 'tv');
     return {
@@ -189,6 +240,11 @@ const realApi = {
       page: res.page,
       totalPages: res.total_pages,
     };
+  },
+
+  async seasonEpisodes(tvId: number, seasonNumber: number): Promise<Episode[]> {
+    const raw = await fetchTMDB<{ episodes: RawEpisode[] }>(`/tv/${tvId}/season/${seasonNumber}`, {});
+    return raw.episodes.map(normalizeEpisode);
   },
 
   async details(mediaType: MediaType, id: number): Promise<MediaDetails | null> {

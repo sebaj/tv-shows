@@ -393,5 +393,7 @@ export function toMediaDetails(item: MockItem): MediaDetails {
   return {
     ...rest,
     genres,
+    seasons: [],
+    nextEpisode: null,
   };
 }

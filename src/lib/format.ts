@@ -11,6 +11,14 @@ export function formatDate(dateStr: string | null): string {
   return date.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
 }
 
+/** Fecha de hoy o posterior (aún no emitido / se emite hoy). */
+export function isUpcoming(dateStr: string | null): boolean {
+  if (!dateStr) return false;
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  return dateStr >= today;
+}
+
 export function ratingColor(vote: number): string {
   if (vote >= 7.5) return 'text-emerald-400';
   if (vote >= 6) return 'text-accent-400';

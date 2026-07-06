@@ -7,6 +7,7 @@ import { useAsync } from '@/hooks/useAsync';
 import Spinner from '@/components/Spinner';
 import EmptyState from '@/components/EmptyState';
 import ScheduleModal from '@/components/ScheduleModal';
+import EpisodeGuide from '@/components/EpisodeGuide';
 
 export default function Details() {
   const params = useParams<{ mediaType: string; id: string }>();
@@ -85,6 +86,14 @@ export default function Details() {
 
             <p className="mx-auto max-w-2xl text-sm text-slate-300 sm:mx-0 sm:text-base">{item.overview}</p>
 
+            {item.nextEpisode && (
+              <div className="mx-auto w-fit rounded-xl border border-accent-500/40 bg-accent-500/10 px-4 py-2.5 text-sm text-accent-200 sm:mx-0">
+                📅 <strong>Próximo episodio:</strong> T{item.nextEpisode.seasonNumber}·E{item.nextEpisode.episodeNumber}
+                {item.nextEpisode.name ? ` «${item.nextEpisode.name}»` : ''} —{' '}
+                {item.nextEpisode.airDate ? formatDate(item.nextEpisode.airDate) : 'fecha por anunciar'}
+              </div>
+            )}
+
             <div className="mt-2 flex flex-wrap justify-center gap-3 sm:justify-start">
               {entry ? (
                 <>
@@ -125,6 +134,10 @@ export default function Details() {
           </div>
         </div>
       </div>
+
+      {item.mediaType === 'tv' && item.seasons.length > 0 && (
+        <EpisodeGuide key={item.id} tvId={item.id} seasons={item.seasons} />
+      )}
 
       {modalOpen && (
         <ScheduleModal

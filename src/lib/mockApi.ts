@@ -1,4 +1,4 @@
-import type { MediaDetails, MediaItem, MediaType, PaginatedResult } from '@/types';
+import type { Episode, MediaDetails, MediaItem, MediaType, NextEpisode, PaginatedResult, SearchType, SeasonSummary } from '@/types';
 import { ALL_MOCK, MockItem, MockTag, toMediaDetails } from '@/lib/mockData';
 
 const PAGE_SIZE = 8;
@@ -22,6 +22,60 @@ function byTag(mediaType: MediaType | 'all', tag: MockTag): MockItem[] {
 // Simula latencia de red para que la UI de carga se sienta real.
 function delay<T>(value: T, ms = 250): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(value), ms));
+}
+
+const EPISODES_PER_SEASON = 8;
+
+function addDays(dateStr: string, days: number): string {
+  const d = new Date(`${dateStr}T00:00:00`);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+// Temporadas sintéticas para el modo demo: una por año desde el estreno,
+// con episodios semanales.
+function mockSeasons(item: MockItem): SeasonSummary[] {
+  const count = item.numberOfSeasons ?? 0;
+  if (!item.releaseDate || count === 0) return [];
+  return Array.from({ length: count }, (_, i) => ({
+    id: item.id * 100 + i + 1,
+    seasonNumber: i + 1,
+    name: `Temporada ${i + 1}`,
+    episodeCount: EPISODES_PER_SEASON,
+    airDate: addDays(item.releaseDate as string, i * 365),
+    posterPath: null,
+  }));
+}
+
+function mockEpisodes(item: MockItem, seasonNumber: number): Episode[] {
+  const season = mockSeasons(item).find((s) => s.seasonNumber === seasonNumber);
+  if (!season?.airDate) return [];
+  const seasonStart = season.airDate;
+  return Array.from({ length: season.episodeCount }, (_, i) => ({
+    id: item.id * 10000 + seasonNumber * 100 + i + 1,
+    seasonNumber,
+    episodeNumber: i + 1,
+    name: `Episodio ${i + 1}`,
+    overview: '',
+    airDate: addDays(seasonStart, i * 7),
+    runtime: 45,
+  }));
+}
+
+function mockNextEpisode(item: MockItem): NextEpisode | null {
+  const today = new Date().toISOString().slice(0, 10);
+  for (const season of mockSeasons(item)) {
+    const upcoming = mockEpisodes(item, season.seasonNumber).find((ep) => ep.airDate && ep.airDate > today);
+    if (upcoming) {
+      return {
+        seasonNumber: upcoming.seasonNumber,
+        episodeNumber: upcoming.episodeNumber,
+        name: upcoming.name,
+        airDate: upcoming.airDate,
+      };
+    }
+  }
+  return null;
 }
 
 export const mockApi = {
@@ -63,15 +117,27 @@ export const mockApi = {
     return delay(paginate(stripTags(pool), opts.page ?? 1));
   },
 
-  search(query: string, page = 1): Promise<PaginatedResult<MediaItem>> {
+  search(query: string, type: SearchType = 'all', page = 1): Promise<PaginatedResult<MediaItem>> {
     const q = query.trim().toLowerCase();
-    const pool = [...ALL_MOCK.movie, ...ALL_MOCK.tv].filter((i) => i.title.toLowerCase().includes(q));
+    const source = type === 'all' ? [...ALL_MOCK.movie, ...ALL_MOCK.tv] : ALL_MOCK[type];
+    const pool = source.filter((i) => i.title.toLowerCase().includes(q));
     pool.sort((a, b) => b.popularity - a.popularity);
     return delay(paginate(stripTags(pool), page));
   },
 
   details(mediaType: MediaType, id: number): Promise<MediaDetails | null> {
     const item = ALL_MOCK[mediaType].find((i) => i.id === id);
-    return delay(item ? toMediaDetails(item) : null);
+    if (!item) return delay(null);
+    const details = toMediaDetails(item);
+    if (mediaType === 'tv') {
+      details.seasons = mockSeasons(item);
+      details.nextEpisode = mockNextEpisode(item);
+    }
+    return delay(details);
+  },
+
+  seasonEpisodes(tvId: number, seasonNumber: number): Promise<Episode[]> {
+    const item = ALL_MOCK.tv.find((i) => i.id === tvId);
+    return delay(item ? mockEpisodes(item, seasonNumber) : []);
   },
 };
