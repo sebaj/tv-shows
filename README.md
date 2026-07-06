@@ -84,15 +84,15 @@ nano .env   # pegar VITE_TMDB_API_KEY, VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY
 docker compose up -d --build
 ```
 
-La app queda en `http://<ip-de-la-pi>:8080`.
+La app queda en `http://<ip-de-la-pi>:8090`.
 
 ### Cloudflare Tunnel
 
 En el dashboard de Cloudflare Zero Trust (`Networks > Tunnels > tu túnel > Public Hostname > Add`):
 
 - **Hostname**: el subdominio que quieras (ej. `tvguide.tudominio.com`)
-- **Service**: `http://localhost:8080` si `cloudflared` corre como servicio en la Pi.
-  Si `cloudflared` corre como contenedor Docker, usa `http://<ip-de-la-pi>:8080` o conecta ambos contenedores a la misma red de Docker y usa `http://tvguide:80`.
+- **Service**: `http://localhost:8090` si `cloudflared` corre como servicio en la Pi.
+  Si `cloudflared` corre como contenedor Docker, usa `http://<ip-de-la-pi>:8090` o conecta ambos contenedores a la misma red de Docker y usa `http://tvguide:80`.
 
 ### No olvidar: URLs de producción en Supabase
 
