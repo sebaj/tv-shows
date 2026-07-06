@@ -17,8 +17,7 @@ export default function App() {
       {authStatus === 'unauthorized' && (
         <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-6">
           <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-            Tu cuenta de Google no está autorizada para usar esta app. Si es tu app, agrega tu email a{' '}
-            <code className="rounded bg-black/30 px-1">VITE_ALLOWED_EMAILS</code> en el archivo <code className="rounded bg-black/30 px-1">.env</code>.
+            Tu cuenta de Google no está autorizada para usar esta app.
           </div>
         </div>
       )}
