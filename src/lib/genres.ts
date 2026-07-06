@@ -38,10 +38,3 @@ export const TV_GENRES: Genre[] = [
 export function genresFor(mediaType: MediaType): Genre[] {
   return mediaType === 'movie' ? MOVIE_GENRES : TV_GENRES;
 }
-
-export function genreNames(ids: number[], mediaType: MediaType): string[] {
-  const list = genresFor(mediaType);
-  return ids
-    .map((id) => list.find((g) => g.id === id)?.name)
-    .filter((n): n is string => Boolean(n));
-}

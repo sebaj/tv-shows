@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { MediaItem } from '@/types';
 import { api, getImageUrl, IS_DEMO } from '@/lib/tmdb';
 import MediaRow from '@/components/MediaRow';
+import ErrorState from '@/components/ErrorState';
 import { ratingColor, yearOf } from '@/lib/format';
+import { useAsync } from '@/hooks/useAsync';
 
 interface Sections {
   trendingDay: MediaItem[];
@@ -31,63 +32,54 @@ const EMPTY: Sections = {
   upcomingTv: [],
 };
 
+async function loadSections(): Promise<Sections> {
+  const [
+    trendingDay,
+    trendingWeek,
+    popularMovies,
+    popularTv,
+    topRatedMovies,
+    topRatedTv,
+    newMovies,
+    newTv,
+    upcomingMovies,
+    upcomingTv,
+  ] = await Promise.all([
+    api.trending('all', 'day'),
+    api.trending('all', 'week'),
+    api.popular('movie'),
+    api.popular('tv'),
+    api.topRated('movie'),
+    api.topRated('tv'),
+    api.newReleases('movie'),
+    api.newReleases('tv'),
+    api.upcoming('movie'),
+    api.upcoming('tv'),
+  ]);
+  return {
+    trendingDay: trendingDay.results,
+    trendingWeek: trendingWeek.results,
+    popularMovies: popularMovies.results,
+    popularTv: popularTv.results,
+    topRatedMovies: topRatedMovies.results,
+    topRatedTv: topRatedTv.results,
+    newMovies: newMovies.results,
+    newTv: newTv.results,
+    upcomingMovies: upcomingMovies.results,
+    upcomingTv: upcomingTv.results,
+  };
+}
+
 export default function Home() {
-  const [sections, setSections] = useState<Sections>(EMPTY);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-
-    Promise.all([
-      api.trending('all', 'day'),
-      api.trending('all', 'week'),
-      api.popular('movie'),
-      api.popular('tv'),
-      api.topRated('movie'),
-      api.topRated('tv'),
-      api.newReleases('movie'),
-      api.newReleases('tv'),
-      api.upcoming('movie'),
-      api.upcoming('tv'),
-    ])
-      .then(
-        ([
-          trendingDay,
-          trendingWeek,
-          popularMovies,
-          popularTv,
-          topRatedMovies,
-          topRatedTv,
-          newMovies,
-          newTv,
-          upcomingMovies,
-          upcomingTv,
-        ]) => {
-          if (cancelled) return;
-          setSections({
-            trendingDay: trendingDay.results,
-            trendingWeek: trendingWeek.results,
-            popularMovies: popularMovies.results,
-            popularTv: popularTv.results,
-            topRatedMovies: topRatedMovies.results,
-            topRatedTv: topRatedTv.results,
-            newMovies: newMovies.results,
-            newTv: newTv.results,
-            upcomingMovies: upcomingMovies.results,
-            upcomingTv: upcomingTv.results,
-          });
-        },
-      )
-      .finally(() => !cancelled && setLoading(false));
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const { data, loading, error, reload } = useAsync(loadSections, []);
+  const sections = data ?? EMPTY;
 
   const hero = sections.trendingDay[0];
   const backdrop = hero ? getImageUrl(hero.backdropPath, 'original') : null;
+
+  if (error) {
+    return <ErrorState title="No pudimos cargar el catálogo" onRetry={reload} />;
+  }
 
   return (
     <div className="flex flex-col gap-10">

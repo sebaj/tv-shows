@@ -14,8 +14,8 @@ export default function App() {
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/peliculas" element={<Catalog mediaType="movie" />} />
-          <Route path="/series" element={<Catalog mediaType="tv" />} />
+          <Route path="/peliculas" element={<Catalog key="movie" mediaType="movie" />} />
+          <Route path="/series" element={<Catalog key="tv" mediaType="tv" />} />
           <Route path="/detalle/:mediaType/:id" element={<Details />} />
           <Route path="/agenda" element={<MyAgenda />} />
           <Route path="/buscar" element={<Search />} />

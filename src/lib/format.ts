@@ -11,11 +11,6 @@ export function formatDate(dateStr: string | null): string {
   return date.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
 }
 
-export function isFuture(dateStr: string | null): boolean {
-  if (!dateStr) return false;
-  return new Date(`${dateStr}T00:00:00`).getTime() > Date.now();
-}
-
 export function ratingColor(vote: number): string {
   if (vote >= 7.5) return 'text-emerald-400';
   if (vote >= 6) return 'text-accent-400';

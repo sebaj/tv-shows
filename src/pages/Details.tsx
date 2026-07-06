@@ -1,38 +1,28 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import type { MediaDetails, MediaType } from '@/types';
 import { api, getImageUrl } from '@/lib/tmdb';
 import { formatDate, ratingColor } from '@/lib/format';
 import { useAgendaStore } from '@/store/agendaStore';
+import { useAsync } from '@/hooks/useAsync';
 import Spinner from '@/components/Spinner';
 import EmptyState from '@/components/EmptyState';
 import ScheduleModal from '@/components/ScheduleModal';
 
 export default function Details() {
-  const { mediaType, id } = useParams<{ mediaType: MediaType; id: string }>();
-  const [item, setItem] = useState<MediaDetails | null>(null);
-  const [loading, setLoading] = useState(true);
+  const params = useParams<{ mediaType: string; id: string }>();
+  const mediaType = params.mediaType === 'movie' || params.mediaType === 'tv' ? params.mediaType : null;
+  const id = Number(params.id);
   const [modalOpen, setModalOpen] = useState(false);
+
+  const { data: item, loading } = useAsync(
+    () => (mediaType && Number.isInteger(id) ? api.details(mediaType, id) : Promise.resolve(null)),
+    [mediaType, id],
+  );
 
   const entry = useAgendaStore((s) => (item ? s.getEntry(item.id, item.mediaType) : undefined));
   const addEntry = useAgendaStore((s) => s.addEntry);
   const updateEntry = useAgendaStore((s) => s.updateEntry);
   const removeEntry = useAgendaStore((s) => s.removeEntry);
-
-  useEffect(() => {
-    if (!mediaType || !id) return;
-    let cancelled = false;
-    setLoading(true);
-    api.details(mediaType as MediaType, Number(id)).then((res) => {
-      if (!cancelled) {
-        setItem(res);
-        setLoading(false);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [mediaType, id]);
 
   if (loading) return <Spinner label="Cargando título..." />;
   if (!item) return <EmptyState icon="🚫" title="No encontramos este título" subtitle="Puede que ya no esté disponible en el catálogo." />;
