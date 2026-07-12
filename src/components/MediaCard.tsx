@@ -26,7 +26,7 @@ export default function MediaCard({ item }: { item: MediaItem }) {
   return (
     <Link
       to={`/detalle/${item.mediaType}/${item.id}`}
-      className="group relative flex w-40 shrink-0 flex-col overflow-hidden rounded-xl bg-base-850 shadow-lg shadow-black/20 transition-transform hover:-translate-y-1 hover:shadow-xl sm:w-44"
+      className="group relative flex w-full flex-col overflow-hidden rounded-xl bg-base-850 shadow-lg shadow-black/20 transition-transform hover:-translate-y-1 hover:shadow-xl"
     >
       <div className="relative aspect-[2/3] w-full overflow-hidden bg-base-800">
         {poster ? (

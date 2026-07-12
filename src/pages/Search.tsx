@@ -53,7 +53,7 @@ export default function Search() {
         </h1>
 
         {query && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {TYPE_TABS.map((t) => (
               <button
                 key={t.key}

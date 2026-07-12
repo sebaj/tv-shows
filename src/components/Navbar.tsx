@@ -40,9 +40,9 @@ function AuthControls() {
       type="button"
       onClick={signInWithGoogle}
       disabled={status === 'loading'}
-      className="rounded-lg bg-accent-500 px-3 py-1.5 text-sm font-semibold text-base-950 hover:bg-accent-400 disabled:opacity-50"
+      className="shrink-0 rounded-lg bg-accent-500 px-3 py-1.5 text-sm font-semibold text-base-950 hover:bg-accent-400 disabled:opacity-50"
     >
-      Entrar con Google
+      Entrar<span className="hidden sm:inline"> con Google</span>
     </button>
   );
 }
@@ -59,13 +59,15 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-30 border-b border-base-800 bg-base-950/95 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-4 px-4 py-3 sm:px-6">
-        <Link to="/" className="flex items-center gap-2 text-lg font-bold text-white">
+      {/* En móvil: fila 1 = logo + buscador + sesión; fila 2 = navegación (el <nav>
+          pasa al final con order-last y ocupa todo el ancho). En sm+ es una sola fila. */}
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 sm:gap-x-4 sm:px-6">
+        <Link to="/" className="flex shrink-0 items-center gap-2 text-lg font-bold text-white">
           <span>🎬</span>
-          <span>CineTV</span>
+          <span className="hidden min-[400px]:inline">CineTV</span>
         </Link>
 
-        <nav className="flex items-center gap-4">
+        <nav className="order-last flex w-full items-center gap-4 overflow-x-auto sm:order-none sm:w-auto">
           <NavLink to="/" end className={linkClass}>
             Inicio
           </NavLink>
@@ -80,7 +82,7 @@ export default function Navbar() {
           </NavLink>
         </nav>
 
-        <form onSubmit={handleSubmit} className="ml-auto flex min-w-[160px] max-w-xs flex-1 items-center">
+        <form onSubmit={handleSubmit} className="ml-auto flex min-w-0 max-w-xs flex-1 items-center">
           <input
             type="search"
             value={query}

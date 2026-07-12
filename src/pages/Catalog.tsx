@@ -49,14 +49,14 @@ export default function Catalog({ mediaType }: { mediaType: MediaType }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-slate-100">{mediaType === 'movie' ? 'Películas' : 'Series'}</h1>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           <select
             value={genreId ?? ''}
             onChange={(e) => {
               setGenreId(e.target.value ? Number(e.target.value) : null);
               setPage(1);
             }}
-            className="rounded-lg border border-base-700 bg-base-850 px-3 py-1.5 text-sm text-slate-200 focus:border-accent-500 focus:outline-none"
+            className="min-w-0 flex-1 rounded-lg border border-base-700 bg-base-850 px-3 py-1.5 text-sm text-slate-200 focus:border-accent-500 focus:outline-none sm:flex-none"
           >
             <option value="">Todos los géneros</option>
             {genres.map((g) => (
@@ -72,7 +72,7 @@ export default function Catalog({ mediaType }: { mediaType: MediaType }) {
               setSortBy(e.target.value as SortBy);
               setPage(1);
             }}
-            className="rounded-lg border border-base-700 bg-base-850 px-3 py-1.5 text-sm text-slate-200 focus:border-accent-500 focus:outline-none"
+            className="min-w-0 flex-1 rounded-lg border border-base-700 bg-base-850 px-3 py-1.5 text-sm text-slate-200 focus:border-accent-500 focus:outline-none sm:flex-none"
           >
             <option value="popularity">Más populares</option>
             <option value="rating">Mejor valoradas</option>

@@ -212,7 +212,7 @@ export default function MyAgenda() {
         </div>
       )}
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {TABS.map((t) => (
           <button key={t.key} type="button" onClick={() => setTab(t.key)} className={pillClass(tab === t.key)}>
             {t.label}

@@ -30,7 +30,11 @@ export default function MediaRow({
           ? Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="aspect-[2/3] w-40 shrink-0 animate-pulse rounded-xl bg-base-850 sm:w-44" />
             ))
-          : items.map((item) => <MediaCard key={`${item.mediaType}-${item.id}`} item={item} />)}
+          : items.map((item) => (
+              <div key={`${item.mediaType}-${item.id}`} className="w-40 shrink-0 sm:w-44">
+                <MediaCard item={item} />
+              </div>
+            ))}
       </div>
     </section>
   );
