@@ -47,7 +47,7 @@ export default function ShareAgendaModal({ onClose }: { onClose: () => void }) {
       reload();
     } catch (err) {
       console.error('No se pudo guardar el permiso:', err);
-      setFormError('No se pudo guardar. ¿Ejecutaste la última versión de supabase/schema.sql?');
+      setFormError('No se pudo guardar el permiso. Inténtalo de nuevo.');
     } finally {
       setBusy(false);
     }
@@ -137,8 +137,7 @@ export default function ShareAgendaModal({ onClose }: { onClose: () => void }) {
         )}
 
         <p className="mt-4 text-xs text-slate-500">
-          💡 Si tu app restringe el acceso con <code className="rounded bg-black/30 px-1">VITE_ALLOWED_EMAILS</code>,
-          recuerda agregar también ahí el email de la otra persona.
+          💡 La otra persona también necesita tener acceso permitido a esta app para poder iniciar sesión.
         </p>
 
         <div className="mt-4 flex justify-end">
