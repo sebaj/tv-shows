@@ -38,11 +38,11 @@ function AuthControls() {
   return (
     <button
       type="button"
-      onClick={signInWithGoogle}
+      onClick={() => void signInWithGoogle()}
       disabled={status === 'loading'}
       className="shrink-0 rounded-lg bg-accent-500 px-3 py-1.5 text-sm font-semibold text-base-950 hover:bg-accent-400 disabled:opacity-50"
     >
-      Entrar<span className="hidden sm:inline"> con Google</span>
+      {status === 'loading' ? 'Conectando...' : <>Entrar<span className="hidden sm:inline"> con Google</span></>}
     </button>
   );
 }

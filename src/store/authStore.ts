@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { Session } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
+import { isAuthServiceReachable, supabase } from '@/lib/supabase';
 import { fetchRemoteEntries, setRemoteUser, upsertRemoteEntries } from '@/lib/agendaSync';
 import { useAgendaStore } from '@/store/agendaStore';
 
@@ -26,23 +26,41 @@ export type AuthStatus = 'loading' | 'signedOut' | 'signedIn' | 'unauthorized';
 interface AuthState {
   user: AuthUser | null;
   status: AuthStatus;
-  signInWithGoogle: () => void;
+  /** El servicio de cuentas no respondió: la app sigue funcionando solo en este dispositivo. */
+  serviceDown: boolean;
+  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()((set) => ({
   user: null,
   status: supabase ? 'loading' : 'signedOut',
+  serviceDown: false,
 
-  signInWithGoogle: () => {
-    void supabase?.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin },
-    });
+  signInWithGoogle: async () => {
+    if (!supabase) return;
+    set({ status: 'loading' });
+    try {
+      if (!(await isAuthServiceReachable())) {
+        throw new Error('El servicio de cuentas no responde');
+      }
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.origin },
+      });
+      if (error) throw error;
+    } catch (err) {
+      console.error('No se pudo iniciar el login con Google:', err);
+      set({ serviceDown: true, status: 'signedOut' });
+    }
   },
 
   signOut: async () => {
-    await supabase?.auth.signOut();
+    try {
+      await supabase?.auth.signOut();
+    } catch (err) {
+      console.error('No se pudo cerrar la sesión limpiamente:', err);
+    }
     setRemoteUser(null);
     useAgendaStore.getState().clear();
     set({ user: null, status: 'signedOut' });
@@ -72,6 +90,7 @@ function handleSession(session: Session | null): void {
     useAuthStore.setState((s) => ({
       user: null,
       status: s.status === 'unauthorized' ? 'unauthorized' : 'signedOut',
+      serviceDown: false,
     }));
     return;
   }
@@ -93,6 +112,7 @@ function handleSession(session: Session | null): void {
       avatarUrl: (session.user.user_metadata?.avatar_url as string | undefined) ?? null,
     },
     status: 'signedIn',
+    serviceDown: false,
   });
 
   // El evento se repite en cada refresh de token: fusionar solo la primera vez.
@@ -101,8 +121,28 @@ function handleSession(session: Session | null): void {
   }
 }
 
-/** Registra el listener de sesión. Llamar una sola vez al arrancar la app. */
+const SESSION_TIMEOUT_MS = 8000;
+
+/**
+ * Registra el listener de sesión. Llamar una sola vez al arrancar la app.
+ *
+ * Si el servicio de cuentas no responde (proyecto caído, sin conexión, DNS),
+ * `onAuthStateChange` puede no emitir nunca: sin este respaldo la app se
+ * quedaría con el botón de sesión deshabilitado para siempre.
+ */
 export function initAuth(): void {
   if (!supabase) return;
+
   supabase.auth.onAuthStateChange((_event, session) => handleSession(session));
+
+  const timeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error('timeout')), SESSION_TIMEOUT_MS),
+  );
+
+  Promise.race([supabase.auth.getSession(), timeout]).catch((err) => {
+    console.error('No se pudo contactar el servicio de cuentas:', err);
+    if (useAuthStore.getState().status === 'loading') {
+      useAuthStore.setState({ status: 'signedOut', serviceDown: true });
+    }
+  });
 }
