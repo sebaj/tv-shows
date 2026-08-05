@@ -59,6 +59,11 @@ export default function Details() {
               {item.mediaType === 'movie' ? 'Película' : 'Serie'}
             </span>
             <h1 className="text-2xl font-bold text-white sm:text-3xl">{item.title}</h1>
+            {item.originalTitle && item.originalTitle !== item.title && (
+              <p className="text-sm text-slate-400">
+                Título original: <span className="italic">{item.originalTitle}</span>
+              </p>
+            )}
             {item.tagline && <p className="italic text-slate-400">"{item.tagline}"</p>}
 
             <div className="flex flex-wrap items-center justify-center gap-3 text-sm text-slate-300 sm:justify-start">

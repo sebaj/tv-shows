@@ -29,6 +29,7 @@ async function fetchTMDB<T>(path: string, params: Record<string, string | number
 interface RawMovie {
   id: number;
   title: string;
+  original_title?: string;
   overview: string;
   poster_path: string | null;
   backdrop_path: string | null;
@@ -65,6 +66,7 @@ interface RawEpisode {
 interface RawTv {
   id: number;
   name: string;
+  original_name?: string;
   overview: string;
   poster_path: string | null;
   backdrop_path: string | null;
@@ -91,6 +93,7 @@ function normalizeMovie(raw: RawMovie): MediaItem {
     id: raw.id,
     mediaType: 'movie',
     title: raw.title,
+    originalTitle: raw.original_title ?? raw.title,
     overview: raw.overview,
     posterPath: raw.poster_path,
     backdropPath: raw.backdrop_path,
@@ -107,6 +110,7 @@ function normalizeTv(raw: RawTv): MediaItem {
     id: raw.id,
     mediaType: 'tv',
     title: raw.name,
+    originalTitle: raw.original_name ?? raw.name,
     overview: raw.overview,
     posterPath: raw.poster_path,
     backdropPath: raw.backdrop_path,

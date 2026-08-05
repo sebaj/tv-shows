@@ -71,6 +71,9 @@ export default function MediaCard({ item }: { item: MediaItem }) {
 
       <div className="flex flex-1 flex-col gap-0.5 p-2.5">
         <span className="line-clamp-2 text-sm font-medium leading-snug text-slate-100">{item.title}</span>
+        {item.originalTitle && item.originalTitle !== item.title && (
+          <span className="line-clamp-1 text-xs italic text-slate-500">{item.originalTitle}</span>
+        )}
         <span className="text-xs text-slate-500">{yearOf(item.releaseDate)}</span>
       </div>
     </Link>

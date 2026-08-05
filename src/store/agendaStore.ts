@@ -27,6 +27,7 @@ export const useAgendaStore = create<AgendaState>()(
           id: item.id,
           mediaType: item.mediaType,
           title: item.title,
+          originalTitle: item.originalTitle,
           posterPath: item.posterPath,
           status,
           scheduledDate,

@@ -21,6 +21,7 @@ interface AgendaRow {
   media_id: number;
   media_type: MediaType;
   title: string;
+  original_title?: string | null;
   poster_path: string | null;
   status: AgendaStatus;
   scheduled_date: string | null;
@@ -33,6 +34,7 @@ function toRow(entry: AgendaEntry): AgendaRow {
     media_id: entry.id,
     media_type: entry.mediaType,
     title: entry.title,
+    original_title: entry.originalTitle ?? null,
     poster_path: entry.posterPath,
     status: entry.status,
     scheduled_date: entry.scheduledDate,
@@ -45,11 +47,32 @@ function toEntry(row: AgendaRow): AgendaEntry {
     id: row.media_id,
     mediaType: row.media_type,
     title: row.title,
+    originalTitle: row.original_title ?? null,
     posterPath: row.poster_path,
     status: row.status,
     scheduledDate: row.scheduled_date,
     addedAt: row.added_at,
   };
+}
+
+/** Postgres rechaza columnas que no existen: código 42703. */
+function isUnknownColumn(error: { code?: string } | null): boolean {
+  return error?.code === '42703';
+}
+
+/**
+ * Guarda filas tolerando que la base no tenga todavía la columna
+ * `original_title` (bases creadas con una versión anterior del esquema).
+ */
+async function upsertRows(rows: AgendaRow[]): Promise<void> {
+  if (!supabase) return;
+  const { error } = await supabase.from('agenda_entries').upsert(rows);
+  if (!error) return;
+  if (!isUnknownColumn(error)) throw error;
+
+  const legacy = rows.map(({ original_title: _omitted, ...rest }) => rest);
+  const { error: retryError } = await supabase.from('agenda_entries').upsert(legacy);
+  if (retryError) throw retryError;
 }
 
 export async function fetchRemoteEntries(): Promise<AgendaEntry[]> {
@@ -63,8 +86,7 @@ export async function fetchRemoteEntries(): Promise<AgendaEntry[]> {
 
 export async function upsertRemoteEntries(entries: AgendaEntry[]): Promise<void> {
   if (!supabase || !remoteUser || entries.length === 0) return;
-  const { error } = await supabase.from('agenda_entries').upsert(entries.map(toRow));
-  if (error) throw error;
+  await upsertRows(entries.map(toRow));
 }
 
 /** Versión fire-and-forget para usar desde las acciones del store. */
@@ -154,8 +176,7 @@ export async function fetchEntriesOf(ownerId: string): Promise<AgendaEntry[]> {
 
 export async function upsertEntryFor(ownerId: string, entry: AgendaEntry): Promise<void> {
   if (!supabase || !remoteUser) return;
-  const { error } = await supabase.from('agenda_entries').upsert({ ...toRow(entry), user_id: ownerId });
-  if (error) throw error;
+  await upsertRows([{ ...toRow(entry), user_id: ownerId } as AgendaRow]);
 }
 
 export async function deleteEntryFor(ownerId: string, id: number, mediaType: MediaType): Promise<void> {

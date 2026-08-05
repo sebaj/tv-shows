@@ -17,6 +17,11 @@ create table if not exists public.agenda_entries (
   primary key (user_id, media_type, media_id)
 );
 
+-- Título original (en su idioma nativo): permite buscar en la agenda por el
+-- nombre en inglés además del traducido. Se añade aparte para que las bases
+-- creadas con la versión anterior del esquema también lo incorporen.
+alter table public.agenda_entries add column if not exists original_title text;
+
 alter table public.agenda_entries enable row level security;
 
 -- Permisos otorgados sobre una agenda. Se comparte por email para que

@@ -86,6 +86,9 @@ function AgendaRow({
         <Link to={`/detalle/${entry.mediaType}/${entry.id}`} className="font-medium text-slate-100 hover:text-accent-400">
           {entry.title}
         </Link>
+        {entry.originalTitle && entry.originalTitle !== entry.title && (
+          <span className="text-xs italic text-slate-500">{entry.originalTitle}</span>
+        )}
         <span className="text-xs uppercase tracking-wide text-slate-500">
           {entry.mediaType === 'movie' ? 'Película' : 'Serie'}
         </span>
@@ -163,7 +166,11 @@ export default function MyAgenda() {
         (e) =>
           (tab === 'all' || e.status === tab) &&
           (typeFilter === 'all' || e.mediaType === typeFilter) &&
-          (needle === '' || normalize(e.title).includes(needle)),
+          // Busca también por el título original: "Blue Eye Samurai" encuentra
+          // "Samurái de ojos azules".
+          (needle === '' ||
+            normalize(e.title).includes(needle) ||
+            normalize(e.originalTitle ?? '').includes(needle)),
       ),
     );
   }, [entries, tab, typeFilter, query]);
@@ -251,26 +258,36 @@ export default function MyAgenda() {
         </div>
 
         {entries.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2">
-            {TYPE_TABS.map((t) => (
-              <button
-                key={t.key}
-                type="button"
-                onClick={() => setTypeFilter(t.key)}
-                className={pillClass(typeFilter === t.key)}
-              >
-                {t.icon && <span className="mr-1.5">{t.icon}</span>}
-                {t.label}
-              </button>
-            ))}
+          <div className="flex flex-wrap items-center gap-2 pl-1">
+            {/* Subfiltro: agrupado y en menor jerarquía que las pastillas de estado. */}
+            <span aria-hidden className="select-none text-sm text-slate-600">
+              ↳
+            </span>
+            <div className="inline-flex items-center gap-0.5 rounded-lg border border-base-800 bg-base-900 p-1">
+              {TYPE_TABS.map((t) => (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={() => setTypeFilter(t.key)}
+                  className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                    typeFilter === t.key
+                      ? 'bg-base-800 text-accent-400'
+                      : 'text-slate-400 hover:bg-base-850 hover:text-slate-200'
+                  }`}
+                >
+                  {t.icon && <span className="mr-1">{t.icon}</span>}
+                  {t.label}
+                </button>
+              ))}
+            </div>
 
             {showSearch && (
               <input
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Buscar en esta agenda..."
-                className="w-full rounded-lg border border-base-700 bg-base-850 px-3 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-accent-500 focus:outline-none sm:ml-auto sm:w-60"
+                placeholder="Buscar por título en español o inglés..."
+                className="w-full rounded-lg border border-base-700 bg-base-850 px-3 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-accent-500 focus:outline-none sm:ml-auto sm:w-72"
               />
             )}
           </div>

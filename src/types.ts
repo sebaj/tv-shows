@@ -9,6 +9,8 @@ export interface MediaItem {
   id: number;
   mediaType: MediaType;
   title: string;
+  /** Título en su idioma original: permite buscar por el nombre en inglés. */
+  originalTitle: string;
   overview: string;
   posterPath: string | null;
   backdropPath: string | null;
@@ -79,6 +81,8 @@ export interface AgendaEntry {
   id: number;
   mediaType: MediaType;
   title: string;
+  /** Opcional: las entradas guardadas antes de esta función no lo tienen. */
+  originalTitle?: string | null;
   posterPath: string | null;
   status: AgendaStatus;
   scheduledDate: string | null;
