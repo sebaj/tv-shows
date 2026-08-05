@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import type { AgendaEntry, AgendaStatus, ShareReceived } from '@/types';
+import type { AgendaEntry, AgendaStatus, MediaType, ShareReceived } from '@/types';
 import { useAgendaStore } from '@/store/agendaStore';
 import { useAuthStore } from '@/store/authStore';
 import { HAS_AUTH } from '@/lib/supabase';
@@ -31,6 +31,23 @@ function pillClass(active: boolean): string {
   return `rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
     active ? 'border-accent-500 bg-accent-500/10 text-accent-400' : 'border-base-700 text-slate-400 hover:border-base-600'
   }`;
+}
+
+const TYPE_TABS: Array<{ key: 'all' | MediaType; icon?: string; label: string }> = [
+  { key: 'all', label: 'Todo' },
+  { key: 'movie', icon: '🎬', label: 'Películas' },
+  { key: 'tv', icon: '📺', label: 'Series' },
+];
+
+/** A partir de esta cantidad de títulos, buscar es más rápido que recorrer la lista. */
+const SEARCH_THRESHOLD = 8;
+
+/** Minúsculas y sin acentos: "samurai" debe encontrar "Samurái". */
+function normalize(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '');
 }
 
 function sortEntries(list: AgendaEntry[]): AgendaEntry[] {
@@ -116,6 +133,8 @@ export default function MyAgenda() {
   const user = useAuthStore((s) => s.user);
 
   const [tab, setTab] = useState<'all' | AgendaStatus>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | MediaType>('all');
+  const [query, setQuery] = useState('');
   const [editing, setEditing] = useState<AgendaEntry | null>(null);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [viewOwnerId, setViewOwnerId] = useState<string | null>(null);
@@ -137,10 +156,20 @@ export default function MyAgenda() {
   const entries = viewing ? sharedEntries.data ?? [] : ownEntries;
   const canEdit = !viewing || viewing.permission === 'write';
 
-  const filtered = useMemo(
-    () => sortEntries(tab === 'all' ? entries : entries.filter((e) => e.status === tab)),
-    [entries, tab],
-  );
+  const filtered = useMemo(() => {
+    const needle = normalize(query.trim());
+    return sortEntries(
+      entries.filter(
+        (e) =>
+          (tab === 'all' || e.status === tab) &&
+          (typeFilter === 'all' || e.mediaType === typeFilter) &&
+          (needle === '' || normalize(e.title).includes(needle)),
+      ),
+    );
+  }, [entries, tab, typeFilter, query]);
+
+  const showSearch = entries.length >= SEARCH_THRESHOLD;
+  const isFiltering = tab !== 'all' || typeFilter !== 'all' || query.trim() !== '';
 
   function handleSave(status: AgendaStatus, date: string | null) {
     if (!editing) return;
@@ -212,12 +241,59 @@ export default function MyAgenda() {
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2">
-        {TABS.map((t) => (
-          <button key={t.key} type="button" onClick={() => setTab(t.key)} className={pillClass(tab === t.key)}>
-            {t.label}
-          </button>
-        ))}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap gap-2">
+          {TABS.map((t) => (
+            <button key={t.key} type="button" onClick={() => setTab(t.key)} className={pillClass(tab === t.key)}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {entries.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            {TYPE_TABS.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setTypeFilter(t.key)}
+                className={pillClass(typeFilter === t.key)}
+              >
+                {t.icon && <span className="mr-1.5">{t.icon}</span>}
+                {t.label}
+              </button>
+            ))}
+
+            {showSearch && (
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Buscar en esta agenda..."
+                className="w-full rounded-lg border border-base-700 bg-base-850 px-3 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-accent-500 focus:outline-none sm:ml-auto sm:w-60"
+              />
+            )}
+          </div>
+        )}
+
+        {isFiltering && entries.length > 0 && (
+          <div className="flex items-center gap-3 text-sm text-slate-500">
+            <span>
+              {filtered.length} de {entries.length} {entries.length === 1 ? 'título' : 'títulos'}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setTab('all');
+                setTypeFilter('all');
+                setQuery('');
+              }}
+              className="font-medium text-accent-400 hover:text-accent-300"
+            >
+              Quitar filtros
+            </button>
+          </div>
+        )}
       </div>
 
       {viewing && sharedEntries.loading ? (
@@ -226,12 +302,14 @@ export default function MyAgenda() {
         <ErrorState title="No pudimos cargar esta agenda" onRetry={sharedEntries.reload} />
       ) : filtered.length === 0 ? (
         <EmptyState
-          icon="🗓️"
-          title="Aún no hay nada aquí"
+          icon={isFiltering ? '🔎' : '🗓️'}
+          title={isFiltering ? 'Sin resultados' : 'Aún no hay nada aquí'}
           subtitle={
-            viewing
-              ? 'Esta agenda todavía no tiene títulos en esta categoría.'
-              : 'Explora el catálogo y presiona “+ Agregar a mi agenda” en las películas o series que quieras ver.'
+            isFiltering
+              ? 'Ningún título coincide con lo que buscas. Prueba con otro filtro.'
+              : viewing
+                ? 'Esta agenda todavía no tiene títulos.'
+                : 'Explora el catálogo y presiona “+ Agregar a mi agenda” en las películas o series que quieras ver.'
           }
         />
       ) : (
